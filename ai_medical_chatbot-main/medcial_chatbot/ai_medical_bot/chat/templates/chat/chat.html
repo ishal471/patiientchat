@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Chat</title>
+</head>
+<body>
+    <h1>Chat with AI Bot</h1>
+    <div id="chatbox">
+        {% for message in conversation_history %}
+            <p><strong>You:</strong> {{ message.message }} <em>({{ message.timestamp }})</em></p>
+            <p><strong>Bot:</strong> {{ message.response|safe }} <em>({{ message.timestamp }})</em></p>
+        {% endfor %}
+    </div>
+
+    <!-- Model Selection Dropdown -->
+    <form method="POST">
+        {% csrf_token %}
+        <label for="model">Choose AI Model:</label>
+        <select name="model" id="model">
+            <option value="google">Google Gemini</option>
+            <option value="openai">OpenAI GPT</option>
+        </select>
+        <br><br>
+        <textarea name="user_input" rows="4" cols="50"></textarea><br>
+        <button type="submit">Send</button>
+    </form>
+</body>
+</html>
