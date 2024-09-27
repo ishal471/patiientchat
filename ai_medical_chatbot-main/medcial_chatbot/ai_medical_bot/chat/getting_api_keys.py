@@ -1,6 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
 import json
+import os
 
 def get_secret():
 
@@ -10,8 +11,8 @@ def get_secret():
     session = boto3.session.Session()
     client = boto3.client(
         "secretsmanager",
-        aws_access_key_id="AKIAQ3EGWJT2S6YZMS45",
-        aws_secret_access_key="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",
+        aws_access_key_id=os.getenv("aws_access_key_id"),
+        aws_secret_access_key=os.getenv("aws_secret_access_key"),
         region_name="us-east-1"
     )
 

@@ -130,8 +130,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 secrets = get_secret()
 
+
+import os
+
 GEMINI_API_KEY=secrets['GEMINI_API_KEY']
-OPENAI_API_KEY ="sk-proj-bzanYAicK6H0qcjeJeWhT3BlbkFJE9kGYqeNnSg6YIQ60tJg"
+OPENAI_API_KEY =os.getenv("OPENAI-API-KEY")
 LANGCHAIN_TRACING_V2=True
 LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
 LANGCHAIN_API_KEY=secrets['LANGSMITH_API_KEY']
