@@ -1,0 +1,9 @@
+openai==0.27.0               # Ensure to use the version compatible with your code
+google-generativeai==0.1.0   # Library for Google Gemini model (adjust if necessary)
+markdown2==2.4.5             # For converting Markdown text to HTML
+langsmith==0.1.0             # For tracing and logging with LangSmith
+langchain==0.0.267           # Provides LLM utilities like prompt templates
+Django==4.2.5                # Django version for your application
+psycopg2==2.9.6              # PostgreSQL adapter for Django database interaction
+boto3==1.28.24   # AWS SDK for Python, version can be adjusted based on your needs
+botocore==1.31.24   # Required as a dependency for boto3

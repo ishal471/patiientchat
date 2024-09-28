@@ -4,14 +4,11 @@ from .models import Patient, Conversation
 from .ai_handler import AIHandler
 from django.conf import settings
 
-from django.shortcuts import render
-
 def opening_view(request):
-    # Your view logic here
     return render(request, 'template_name.html')
 
-
 def chat_view(request):
+    # Fetch the first patient or create one if it doesn't exist
     patient = Patient.objects.first()
     if not patient:
         patient = Patient.objects.create(
@@ -46,11 +43,18 @@ def chat_view(request):
 
     if request.method == 'POST':
         user_input = request.POST.get('user_input')
-        bot_response = ai_handler.generate_response(user_input=user_input, patient=patient)
 
+        # Fetch the previous conversation history
+        conversation_history = Conversation.objects.filter(patient=patient).order_by('timestamp').values('message', 'response')
+
+        # Generate the bot's response, passing the conversation history
+        bot_response = ai_handler.generate_response(user_input=user_input, patient=patient, conversation_history=conversation_history)
+
+        # Save the new conversation
         Conversation.objects.create(patient=patient, message=user_input, response=bot_response)
 
-    conversation_history = Conversation.objects.filter(patient=patient).order_by('-timestamp')
+    # Fetch updated conversation history to display in the chat
+    conversation_history = Conversation.objects.filter(patient=patient).order_by('timestamp')
 
     return render(request, 'chat/chat.html', {
         'patient': patient,

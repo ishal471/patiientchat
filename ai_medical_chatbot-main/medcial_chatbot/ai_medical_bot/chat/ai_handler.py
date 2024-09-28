@@ -28,9 +28,9 @@ class AIHandler:
         run_type="llm",
         name="AI_BOT_RESPONSE_GENERATOR",
         tags=["BOT_RESPONSE_GENERATOR"],
-        metadata={"task":"token_check"}
+        metadata={"task": "token_check"}
     )
-    def generate_response(self, user_input, patient):
+    def generate_response(self, user_input, patient, conversation_history=None):
         user_input_lower = user_input.lower()
 
         responses = []
@@ -51,14 +51,21 @@ class AIHandler:
 
         if responses:
             return " ".join(responses)
-        
+
+        # Format the conversation history into the prompt
+        formatted_conversation_history = "\n".join([f"User: {conv['message']}\nBot: {conv['response']}" for conv in conversation_history]) if conversation_history else ""
+
+        # Update the prompt template to include conversation history
         prompt_template = PromptTemplate(
-            input_variables=["user_input", "doctor_name"],
+            input_variables=["user_input", "doctor_name", "conversation_history"],
             template="""
                 AI Role:
                 You are a health assistant designed to interact with patients regarding their health and care plan. Your primary goal is to respond to health-related inquiries, assist with treatment and medication-related requests, and facilitate communication between the patient and their doctor.
 
                 Task Input:
+                Previous Conversation:
+                {conversation_history}
+
                 Patient message: "{user_input}"
                 Doctor's Name: "{doctor_name}"
             """
@@ -66,7 +73,8 @@ class AIHandler:
         
         rendered_prompt = prompt_template.format(
             user_input=user_input,
-            doctor_name=patient.doctor_name
+            doctor_name=patient.doctor_name,
+            conversation_history=formatted_conversation_history
         )
 
         if self.model_choice == 'google':
@@ -75,10 +83,10 @@ class AIHandler:
         elif self.model_choice == 'openai':
             response = openai.chat.completions.create(
                 model="gpt-4",
-                messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": rendered_prompt}
-    ],
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": rendered_prompt}
+                ],
                 max_tokens=150
             )
             response_html = markdown2.markdown(response.choices[0].message.content)
