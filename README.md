@@ -1,5 +1,6 @@
 Steps:
-1. Export openai api key, langsmith variables for token manament, aws secret manager variablees to environment variables (aws has gemini etc keys)
+install requirments.txt (pip install requirments.txt)
+1. Export openai api key, langsmith variables for token managment, aws secret manager variablees to environment variables (aws has gemini etc keys) (or skip storing keys in aws, put api keys in settings.py)
 2. In settings.py change postgress db details
 3. change path to manage.py dircetory and the run command python manage.py runserver
 4. open the prompted url append /chat/ for AI Health bot
