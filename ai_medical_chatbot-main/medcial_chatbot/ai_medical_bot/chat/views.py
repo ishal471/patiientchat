@@ -1,14 +1,17 @@
 from django.shortcuts import render
+from langchain.memory import ConversationSummaryMemory, ChatMessageHistory
+from langchain_openai import OpenAI
+from django.conf import settings
 from datetime import timedelta
 from .models import Patient, Conversation
 from .ai_handler import AIHandler
-from django.conf import settings
 
 def opening_view(request):
-    return render(request, 'template_name.html')
+    # Your logic here
+    return render(request, 'chat.html')
 
 def chat_view(request):
-    # Fetch the first patient or create one if it doesn't exist
+    # Fetch or create the patient
     patient = Patient.objects.first()
     if not patient:
         patient = Patient.objects.create(
@@ -24,36 +27,42 @@ def chat_view(request):
             doctor_name="Dr. Chittibabu"
         )
 
-    # Get selected model
-    selected_model = request.POST.get('model', 'google')  # Default to 'google'
-
-    if selected_model == 'openai':
-        api_key = settings.OPENAI_API_KEY
-    else:
-        api_key = settings.GEMINI_API_KEY
+    # Get selected model and API key
+    selected_model = request.POST.get('model', 'google')
+    api_key = settings.OPENAI_API_KEY if selected_model == 'openai' else settings.GEMINI_API_KEY
 
     ai_handler = AIHandler(api_key=api_key, model_choice=selected_model)
 
-    if settings.LANGCHAIN_TRACING_V2:
-        ai_handler.initialize_tracing(
-            endpoint=settings.LANGCHAIN_ENDPOINT,
-            project=settings.LANGCHAIN_PROJECT,
-            langsmith_api_key=settings.LANGCHAIN_API_KEY
-        )
+    # Initialize LangChain memory with the conversation summary
+    history = ChatMessageHistory()
+    if patient.conversation_summary:
+        # Load existing conversation into memory
+        memory = ConversationSummaryMemory(llm=OpenAI(temperature=0), buffer=patient.conversation_summary, chat_memory=history, return_messages=True)
+    else:
+        memory = ConversationSummaryMemory(llm=OpenAI(temperature=0), chat_memory=history, return_messages=True)
 
     if request.method == 'POST':
         user_input = request.POST.get('user_input')
 
-        # Fetch the previous conversation history
+        # Fetch previous conversation history (if any) from the database
         conversation_history = Conversation.objects.filter(patient=patient).order_by('timestamp').values('message', 'response')
+        for conv in conversation_history:
+            history.add_user_message(conv['message'])
+            history.add_ai_message(conv['response'])
 
-        # Generate the bot's response, passing the conversation history
-        bot_response = ai_handler.generate_response(user_input=user_input, patient=patient, conversation_history=conversation_history)
+        # Generate response using the conversation summary and history
+        bot_response = ai_handler.generate_response(user_input=user_input, patient=patient, conversation_summary=memory.buffer)
 
-        # Save the new conversation
+        # Save the conversation to the database
         Conversation.objects.create(patient=patient, message=user_input, response=bot_response)
 
-    # Fetch updated conversation history to display in the chat
+        # Update conversation summary and save to the patient record
+        messages = memory.chat_memory.messages
+        new_summary = memory.predict_new_summary(messages, patient.conversation_summary)
+        patient.conversation_summary = new_summary
+        patient.save()
+
+    # Fetch updated conversation history for display
     conversation_history = Conversation.objects.filter(patient=patient).order_by('timestamp')
 
     return render(request, 'chat/chat.html', {

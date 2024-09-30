@@ -11,9 +11,11 @@ class Patient(models.Model):
     last_appointment = models.DateTimeField()
     next_appointment = models.DateTimeField()
     doctor_name = models.CharField(max_length=100)
+    conversation_summary = models.TextField(blank=True, default="")  # New field
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
     
 class Conversation(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)

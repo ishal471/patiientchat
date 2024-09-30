@@ -6,7 +6,6 @@ from datetime import timedelta
 import langsmith
 from langchain.prompts import PromptTemplate
 from langsmith import traceable
-
 class AIHandler:
     def __init__(self, api_key, model_choice='google'):
         self.api_key = api_key
@@ -18,19 +17,7 @@ class AIHandler:
         elif self.model_choice == 'openai':
             openai.api_key = self.api_key
 
-        self.client = None
-
-    def initialize_tracing(self, endpoint, project, langsmith_api_key):
-        self.client = langsmith.Client(api_key=langsmith_api_key, web_url=endpoint)
-        self.project = project
-
-    @traceable(
-        run_type="llm",
-        name="AI_BOT_RESPONSE_GENERATOR",
-        tags=["BOT_RESPONSE_GENERATOR"],
-        metadata={"task": "token_check"}
-    )
-    def generate_response(self, user_input, patient, conversation_history=None):
+    def generate_response(self, user_input, patient, conversation_summary):
         user_input_lower = user_input.lower()
 
         responses = []
@@ -52,19 +39,15 @@ class AIHandler:
         if responses:
             return " ".join(responses)
 
-        # Format the conversation history into the prompt
-        formatted_conversation_history = "\n".join([f"User: {conv['message']}\nBot: {conv['response']}" for conv in conversation_history]) if conversation_history else ""
-
-        # Update the prompt template to include conversation history
+        # Use conversation summary instead of full history for LLM call
         prompt_template = PromptTemplate(
-            input_variables=["user_input", "doctor_name", "conversation_history"],
+            input_variables=["user_input", "doctor_name", "conversation_summary"],
             template="""
                 AI Role:
                 You are a health assistant designed to interact with patients regarding their health and care plan. Your primary goal is to respond to health-related inquiries, assist with treatment and medication-related requests, and facilitate communication between the patient and their doctor.
 
-                Task Input:
-                Previous Conversation:
-                {conversation_history}
+                Conversation Summary:
+                {conversation_summary}
 
                 Patient message: "{user_input}"
                 Doctor's Name: "{doctor_name}"
@@ -74,12 +57,11 @@ class AIHandler:
         rendered_prompt = prompt_template.format(
             user_input=user_input,
             doctor_name=patient.doctor_name,
-            conversation_history=formatted_conversation_history
+            conversation_summary=conversation_summary
         )
-
         if self.model_choice == 'google':
             response = self.model.generate_content(rendered_prompt)
-            response_html = markdown2.markdown(response.text)
+            return response.text
         elif self.model_choice == 'openai':
             response = openai.chat.completions.create(
                 model="gpt-4",
@@ -89,6 +71,4 @@ class AIHandler:
                 ],
                 max_tokens=150
             )
-            response_html = markdown2.markdown(response.choices[0].message.content)
-
-        return response_html
+            return response.choices[0].message.content
